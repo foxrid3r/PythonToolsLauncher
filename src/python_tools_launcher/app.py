@@ -113,7 +113,7 @@ class ToolDialog(tk.Toplevel):
         for row, (label, variable) in enumerate(
             (
                 ("Name", self.name),
-                ("Executable", self.executable),
+                ("Program or script", self.executable),
                 ("Start in", self.cwd),
                 ("Arguments", self.arguments),
             )
@@ -141,8 +141,13 @@ class ToolDialog(tk.Toplevel):
     def _browse_executable(self) -> None:
         filename = filedialog.askopenfilename(
             parent=self,
-            title="Choose an executable",
-            filetypes=(("Programs", "*.exe *.com"), ("All files", "*.*")),
+            title="Choose a program or Python script",
+            filetypes=(
+                ("Programs and Python scripts", "*.exe *.com *.py *.pyw"),
+                ("Python scripts", "*.py *.pyw"),
+                ("Programs", "*.exe *.com"),
+                ("All files", "*.*"),
+            ),
         )
         if filename:
             self.executable.set(filename)
@@ -162,7 +167,7 @@ class ToolDialog(tk.Toplevel):
         if not name or not executable:
             messagebox.showerror(
                 "Missing information",
-                "Enter a name and choose an executable.",
+                "Enter a name and choose a program or Python script.",
                 parent=self,
             )
             return
@@ -428,7 +433,7 @@ class Launcher:
         if tool and messagebox.askyesno(
             "Remove tool",
             f'Remove "{tool.name}" from the launcher?\n\n'
-            "The executable will not be deleted.",
+            "The program or script will not be deleted.",
             parent=self.root,
         ):
             self.store.remove(tool.id)

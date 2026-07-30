@@ -1,6 +1,7 @@
 # Python Tools Launcher
 
-A Windows launcher that presents local GUI tools as a responsive home-screen grid.
+A Windows launcher that presents local executables and Python scripts as a
+responsive home-screen grid.
 It follows the Windows light/dark app theme and stores its tool list at:
 
 ```text
@@ -24,3 +25,10 @@ py -3.14 -m venv .venv
 The finished application is written to `dist\PythonTools.exe`. The Windows executable
 icon comes from `assets\launcher-icon.ico`; the Tk window and taskbar icon use
 `assets\launcher-icon.png`.
+
+## Add a shortcut
+
+Choose **Add Tool**, then browse to an executable (`.exe` or `.com`) or Python
+script (`.py` or `.pyw`). Python scripts are launched with `pythonw` so they do
+not open an extra console window. The script's folder is used as its working
+directory by default; you can change it with **Start in**.

@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
+import sys
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -78,13 +80,13 @@ class ToolStore:
 
 
 def launch(tool: Tool) -> None:
-    executable = tool.path
-    if not executable.is_file():
-        raise FileNotFoundError(f"Executable not found:\n{executable}")
+    target = tool.path
+    if not target.is_file():
+        raise FileNotFoundError(f"Program or Python script not found:\n{target}")
     cwd = (
         Path(os.path.expandvars(os.path.expanduser(tool.working_directory)))
         if tool.working_directory
-        else executable.parent
+        else target.parent
     )
     if not cwd.is_dir():
         raise FileNotFoundError(f"Working directory not found:\n{cwd}")
@@ -92,8 +94,32 @@ def launch(tool: Tool) -> None:
         value[1:-1] if len(value) >= 2 and value[0] == value[-1] == '"' else value
         for value in shlex.split(tool.arguments, posix=False)
     ]
+    command = [str(target), *arguments]
+    if target.suffix.casefold() in {".py", ".pyw"}:
+        command = [python_interpreter(), str(target), *arguments]
     subprocess.Popen(
-        [str(executable), *arguments],
+        command,
         cwd=cwd,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+
+
+def python_interpreter() -> str:
+    """Return an interpreter suitable for launching a Python shortcut."""
+    if os.name != "nt":
+        return sys.executable
+
+    # A normal source install has pythonw beside python. A frozen launcher does
+    # not: sys.executable is the launcher itself, so look on PATH instead.
+    if not getattr(sys, "frozen", False):
+        sibling = Path(sys.executable).with_name("pythonw.exe")
+        if sibling.is_file():
+            return str(sibling)
+
+    interpreter = shutil.which("pyw") or shutil.which("pythonw")
+    if interpreter:
+        return interpreter
+    raise FileNotFoundError(
+        "No Python interpreter was found. Install Python (including the Python "
+        "launcher) or add pythonw.exe to PATH."
     )
