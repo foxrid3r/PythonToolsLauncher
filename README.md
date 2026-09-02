@@ -4,6 +4,8 @@ A Windows launcher that presents local executables and Python scripts as a
 responsive home-screen grid.
 It follows the Windows light/dark app theme and stores its tool list at:
 
+![Python Tools Launcher main window](docs/images/python-tools-launcher-main.png)
+
 ```text
 %LOCALAPPDATA%\PythonToolLauncher\tools.json
 ```
@@ -32,3 +34,11 @@ Choose **Add Tool**, then browse to an executable (`.exe` or `.com`) or Python
 script (`.py` or `.pyw`). Python scripts are launched with `pythonw` so they do
 not open an extra console window. The script's folder is used as its working
 directory by default; you can change it with **Start in**.
+
+### Add an executable
+
+![Add an executable](docs/images/python-tools-launcher-add-exe.png)
+
+### Add a Python script
+
+![Add a Python script](docs/images/python-tools-launcher-add-python.png)
