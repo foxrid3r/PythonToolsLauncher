@@ -4,12 +4,9 @@ import os
 import sys
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import colorchooser, filedialog, messagebox, ttk
 
-from .model import Tool, ToolStore, launch
-
-
-COLORS = ("#3478F6", "#5856D6", "#AF52DE", "#FF2D55", "#FF9500", "#20A4A9")
+from .model import DEFAULT_ICON_COLOR, Tool, ToolStore, launch
 
 
 def windows_uses_dark_theme() -> bool:
@@ -104,8 +101,8 @@ class ToolDialog(tk.Toplevel):
         self.tool_id = tool.id if tool else ""
         self.name = tk.StringVar(value=tool.name if tool else "")
         self.executable = tk.StringVar(value=tool.executable if tool else "")
-        self.cwd = tk.StringVar(value=tool.working_directory if tool else "")
-        self.arguments = tk.StringVar(value=tool.arguments if tool else "")
+        self.original_tool = tool
+        self.icon_color = tool.icon_color if tool else DEFAULT_ICON_COLOR
 
         body = ttk.Frame(self, padding=18)
         body.pack(fill="both", expand=True)
@@ -114,8 +111,6 @@ class ToolDialog(tk.Toplevel):
             (
                 ("Name", self.name),
                 ("Program or script", self.executable),
-                ("Start in", self.cwd),
-                ("Arguments", self.arguments),
             )
         ):
             ttk.Label(body, text=label).grid(row=row, column=0, sticky="w", pady=6)
@@ -125,11 +120,14 @@ class ToolDialog(tk.Toplevel):
         ttk.Button(body, text="Browse...", command=self._browse_executable).grid(
             row=1, column=2
         )
-        ttk.Button(body, text="Browse...", command=self._browse_directory).grid(
+        ttk.Label(body, text="Icon color").grid(row=2, column=0, sticky="w", pady=6)
+        self.color_preview = tk.Label(body, background=self.icon_color, width=4)
+        self.color_preview.grid(row=2, column=1, sticky="w", padx=(10, 8), pady=6)
+        ttk.Button(body, text="Choose...", command=self._choose_color).grid(
             row=2, column=2
         )
         buttons = ttk.Frame(body)
-        buttons.grid(row=4, column=0, columnspan=3, sticky="e", pady=(14, 0))
+        buttons.grid(row=3, column=0, columnspan=3, sticky="e", pady=(14, 0))
         ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="right")
         ttk.Button(buttons, text="Save", command=self._save).pack(
             side="right", padx=(0, 8)
@@ -151,15 +149,16 @@ class ToolDialog(tk.Toplevel):
         )
         if filename:
             self.executable.set(filename)
-            if not self.cwd.get():
-                self.cwd.set(str(Path(filename).parent))
             if not self.name.get():
                 self.name.set(Path(filename).stem)
 
-    def _browse_directory(self) -> None:
-        directory = filedialog.askdirectory(parent=self, title="Choose working directory")
-        if directory:
-            self.cwd.set(directory)
+    def _choose_color(self) -> None:
+        _rgb, color = colorchooser.askcolor(
+            color=self.icon_color, parent=self, title="Choose icon color"
+        )
+        if color:
+            self.icon_color = color
+            self.color_preview.configure(background=color)
 
     def _save(self) -> None:
         name = self.name.get().strip()
@@ -174,8 +173,9 @@ class ToolDialog(tk.Toplevel):
         self.result = Tool(
             name=name,
             executable=executable,
-            working_directory=self.cwd.get().strip().strip('"'),
-            arguments=self.arguments.get().strip(),
+            working_directory=self.original_tool.working_directory if self.original_tool else "",
+            arguments=self.original_tool.arguments if self.original_tool else "",
+            icon_color=self.icon_color,
             id=self.tool_id,
         )
         self.destroy()
@@ -199,11 +199,13 @@ class AppTile(tk.Canvas):
             cursor="hand2",
             takefocus=True,
         )
-        color = COLORS[sum(map(ord, tool.name)) % len(COLORS)]
+        color = tool.icon_color
+        red, green, blue = (int(color[i:i + 2], 16) for i in (1, 3, 5))
+        text_color = "#1C1C1E" if red * 299 + green * 587 + blue * 114 > 150000 else "white"
         initials = "".join(word[0] for word in tool.name.split()[:2]).upper() or "?"
         self._rounded(33, 7, 109, 83, 18, fill=color, outline="")
         self.create_text(
-            71, 45, text=initials, fill="white", font=("Segoe UI Semibold", 23)
+            71, 45, text=initials, fill=text_color, font=("Segoe UI Semibold", 23)
         )
         self.create_text(
             71,
@@ -369,6 +371,10 @@ class Launcher:
         width = max(self.canvas.winfo_width(), 150)
         columns = max(1, width // 158)
         self.canvas.itemconfigure(self.window, width=width)
+        # Grid keeps column options after the widgets in them are destroyed.
+        # Clear obsolete weights/uniform groups before laying out a narrower grid.
+        for column in range(self.tiles.grid_size()[0]):
+            self.tiles.columnconfigure(column, weight=0, uniform="", minsize=0)
         for column in range(columns):
             self.tiles.columnconfigure(column, weight=1, uniform="apps")
         for index, tool in enumerate(self.visible):

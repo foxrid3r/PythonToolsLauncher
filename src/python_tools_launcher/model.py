@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -11,6 +12,9 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 
+DEFAULT_ICON_COLOR = "#3478F6"
+
+
 @dataclass(slots=True)
 class Tool:
     name: str
@@ -18,8 +22,13 @@ class Tool:
     working_directory: str = ""
     arguments: str = ""
     id: str = ""
+    icon_color: str = DEFAULT_ICON_COLOR
 
     def __post_init__(self) -> None:
+        if not isinstance(self.icon_color, str) or not re.fullmatch(
+            r"#[0-9a-fA-F]{6}", self.icon_color
+        ):
+            self.icon_color = DEFAULT_ICON_COLOR
         if not self.id:
             self.id = str(uuid.uuid4())
 
